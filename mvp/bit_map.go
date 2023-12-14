@@ -4,44 +4,58 @@ import (
 	"fmt"
 )
 
-type BitMap []byte
+type BitMap struct {
+	bitMap []byte
+	length int
+}
 
 const (
 	byteSize = 8
 )
 
-var (
-	ErrBitMapLength = fmt.Errorf("[NewBitMap] Length cannot be divided by %v", byteSize)
-	ErrValueLength  = fmt.Errorf("[Set] Value bigger than length * %v", byteSize)
-)
-
 // NewBitMap n: 总位数
-func NewBitMap(n uint) (BitMap, error) {
+func NewBitMap(n uint) (*BitMap, error) {
 	if n%byteSize != 0 {
-		return nil, ErrBitMapLength
+		return nil, ErrBitMapLength(n)
 	}
-	return make([]byte, n/byteSize+1), nil
+	resp := &BitMap{
+		bitMap: make([]byte, n/byteSize+1),
+	}
+	resp.length = len(resp.bitMap)
+	return resp, nil
 }
 
-func (bt BitMap) Set(val uint) error {
-	if val > uint(len(bt)*byteSize) {
-		return ErrValueLength
+func (bt *BitMap) Len() int {
+	return bt.length
+}
+
+func (bt *BitMap) Set(val uint) error {
+	if val > uint(bt.Len()*byteSize) {
+		return bt.ErrValueLength()
 	}
-	bt[val/byteSize] |= 1 << (val % byteSize)
+	bt.bitMap[val/byteSize] |= 1 << (val % byteSize)
 	return nil
 }
 
-func (bt BitMap) Del(val uint) bool {
-	if val > uint(len(bt)*byteSize) {
+func (bt *BitMap) Del(val uint) bool {
+	if val > uint(bt.Len()*byteSize) {
 		return false
 	}
-	bt[val/byteSize] &= 0 << (val % byteSize)
+	bt.bitMap[val/byteSize] &= 0 << (val % byteSize)
 	return true
 }
 
-func (bt BitMap) NotExist(val uint) bool {
-	if val > uint(len(bt)*byteSize) {
+func (bt *BitMap) NotExist(val uint) bool {
+	if val > uint(bt.Len()*byteSize) {
 		return false
 	}
-	return bt[val/byteSize]&(1<<(val%byteSize)) == 0
+	return bt.bitMap[val/byteSize]&(1<<(val%byteSize)) == 0
+}
+
+func (bt *BitMap) ErrValueLength() error {
+	return fmt.Errorf("[Set] Value bigger than %v(Length) * %v(Bytesize)", bt.Len(), byteSize)
+}
+
+func ErrBitMapLength(len uint) error {
+	return fmt.Errorf("[NewBitMap] %v(Length) cannot be divided by %v(Bytesize)", len, byteSize)
 }
