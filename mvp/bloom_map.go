@@ -3,7 +3,13 @@ package mvp
 import (
 	"errors"
 	"fmt"
+
+	"fs1n.anything.bloomfilter/consts"
 )
+
+/**
+ * Value -> HashValue -> Int64Value -> BloomFilter[Int64Value/8] | 1 << Int64Value%8
+ */
 
 type BloomMap struct {
 	Values  map[string]*BitMap
@@ -11,26 +17,21 @@ type BloomMap struct {
 	Length  uint
 }
 
-const (
-	MD5    string = "md5"
-	SHA128 string = "sha128"
-	SHA256 string = "sha256"
-)
-
 var (
 	HashMap map[string]interface{}
 )
 
 var (
 	errWarnHashMethod = errors.New("[HaveMethod] BlooMap didnt set this method")
-	errSetHashValue   = errors.New("[Put] set Hash Err")
+	errSetHashValue   = errors.New("[Put] set hash err")
 )
 
 func InitHashMethod() {
 	HashMap = make(map[string]interface{})
-	HashMap[MD5] = true
-	HashMap[SHA128] = true
-	HashMap[SHA256] = true
+	HashMap[consts.MD5] = true
+	HashMap[consts.SHA1] = true
+	HashMap[consts.SHA256] = true
+	HashMap[consts.SHA512] = true
 }
 
 func BuildDefaultBloomMap() *BloomMap {
@@ -53,6 +54,7 @@ func NewBloomMap(length uint, hashMethods ...string) (*BloomMap, error) {
 			res.Methods[hashMethod] = true
 			res.Values[hashMethod], err = NewBitMap(length)
 			if err != nil {
+				// TODO: Access the log module.
 				fmt.Println("[NewBloomMap] Create BloomMap Error")
 				return nil, err
 			}
@@ -73,7 +75,11 @@ func (b *BloomMap) HaveMethod(hashMethod string) bool {
 
 func (b *BloomMap) Put(value []byte) error {
 	for method := range b.Methods {
-		err := b.setHashValue(method, doHash(method, value))
+		hashValue, err := doHash(method, value)
+		if err != nil {
+			return err
+		}
+		err = b.setHashValue(method, hashValue%b.Length)
 		if err != nil {
 			fmt.Println(errSetHashValue, err)
 		}
@@ -91,17 +97,19 @@ func (b *BloomMap) NotExist(value []byte) bool {
 }
 
 func (b *BloomMap) notExist(method string, value []byte) bool {
-	hashValue := doHash(method, value)
-	// ! And Here
-	return b.Values[method].NotExist(hashValue % b.Length)
+	hashValue, err := doHash(method, value)
+	hashValue = hashValue % b.Length
+	if err != nil {
+		return true
+	}
+	return b.Values[method].NotExist(hashValue)
 }
 
 func (b *BloomMap) setHashValue(hashMethod string, value uint) error {
 	if !b.HaveMethod(hashMethod) {
 		return errWarnHashMethod
 	}
-	// ! Here
-	if err := b.Values[hashMethod].Set(value % b.Length); err != nil {
+	if err := b.Values[hashMethod].Set(value); err != nil {
 		return err
 	}
 	return nil
@@ -114,7 +122,3 @@ func (b *BloomMap) ToString() map[string][]byte {
 	}
 	return res
 }
-
-/**
- * Value -> HashValue -> Int64Value -> BloomFilter[Int64Value/8] | 1 << Int64Value%8
- */
