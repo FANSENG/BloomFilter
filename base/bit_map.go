@@ -1,4 +1,4 @@
-package mvp
+package base
 
 import (
 	"fmt"
@@ -51,6 +51,10 @@ func (bt *BitMap) NotExist(val uint) bool {
 		return false
 	}
 	return bt.bitMap[val/consts.ByteSize]&(1<<(val%consts.ByteSize)) == 0
+}
+
+func (bt *BitMap) ToString() string {
+	return string(bt.bitMap)
 }
 
 func (bt *BitMap) ErrValueLength() error {
