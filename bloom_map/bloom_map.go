@@ -1,10 +1,12 @@
-package mvp
+package bloom_map
 
 import (
 	"errors"
 	"fmt"
 
+	"fs1n.anything.bloomfilter/base"
 	"fs1n.anything.bloomfilter/consts"
+	"fs1n.anything.bloomfilter/utils"
 )
 
 /**
@@ -12,7 +14,7 @@ import (
  */
 
 type BloomMap struct {
-	Values  map[string]*BitMap
+	Values  map[string]*base.BitMap
 	Methods map[string]interface{}
 	Length  uint
 }
@@ -23,7 +25,7 @@ var (
 
 var (
 	errWarnHashMethod = errors.New("[HaveMethod] BlooMap didnt set this method")
-	errSetHashValue   = errors.New("[Put] set hash err")
+	errSetHashValue   = errors.New("[Put] Set hash value err")
 )
 
 func InitHashMethod() {
@@ -38,7 +40,7 @@ func BuildDefaultBloomMap() *BloomMap {
 	res := &BloomMap{}
 	res.Length = 0
 	res.Methods = make(map[string]interface{})
-	res.Values = make(map[string]*BitMap)
+	res.Values = make(map[string]*base.BitMap)
 	return res
 }
 
@@ -52,7 +54,7 @@ func NewBloomMap(length uint, hashMethods ...string) (*BloomMap, error) {
 	for _, hashMethod := range hashMethods {
 		if _, ok := HashMap[hashMethod]; ok {
 			res.Methods[hashMethod] = true
-			res.Values[hashMethod], err = NewBitMap(length)
+			res.Values[hashMethod], err = base.NewBitMap(length)
 			if err != nil {
 				// TODO: Access the log module.
 				fmt.Println("[NewBloomMap] Create BloomMap Error")
@@ -75,13 +77,13 @@ func (b *BloomMap) HaveMethod(hashMethod string) bool {
 
 func (b *BloomMap) Put(value []byte) error {
 	for method := range b.Methods {
-		hashValue, err := doHash(method, value)
+		hashValue, err := utils.DoHash(method, value)
 		if err != nil {
 			return err
 		}
 		err = b.setHashValue(method, hashValue%b.Length)
 		if err != nil {
-			fmt.Println(errSetHashValue, err)
+			return errSetHashValue
 		}
 	}
 	return nil
@@ -97,7 +99,7 @@ func (b *BloomMap) NotExist(value []byte) bool {
 }
 
 func (b *BloomMap) notExist(method string, value []byte) bool {
-	hashValue, err := doHash(method, value)
+	hashValue, err := utils.DoHash(method, value)
 	hashValue = hashValue % b.Length
 	if err != nil {
 		return true
@@ -115,10 +117,10 @@ func (b *BloomMap) setHashValue(hashMethod string, value uint) error {
 	return nil
 }
 
-func (b *BloomMap) ToString() map[string][]byte {
-	res := make(map[string][]byte)
+func (b *BloomMap) ToString() map[string]string {
+	res := make(map[string]string)
 	for key, value := range b.Values {
-		res[key] = value.bitMap
+		res[key] = value.ToString()
 	}
 	return res
 }

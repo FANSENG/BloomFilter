@@ -1,4 +1,4 @@
-package mvp
+package utils
 
 import (
 	"crypto/md5"
@@ -25,7 +25,7 @@ func InitHashInstance() {
 	hashInstanceSHA512 = sha512.New()
 }
 
-func doHash(method string, value []byte) (uint, error) {
+func DoHash(method string, value []byte) (uint, error) {
 	// TODO Add hash cache.
 	var res uint
 	var err error = nil
